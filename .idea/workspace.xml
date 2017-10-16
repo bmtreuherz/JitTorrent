@@ -1,39 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="7ce3bc1c-f9db-4395-bf08-3c2501b792a0" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/company/delegates/ClientDelegate.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/company/delegates/ServerDelegate.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/company/messages/ActualMessage.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/company/messages/HandshakeMessage.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/company/messages/Message.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/company/messages/MessageType.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/company/utilities/InMemoryFile.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/tests/StartTestEnv.java" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/Client.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/Common.cfg" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/CommonConfig.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/FileParser.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/Peer.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/PeerInfo.cfg" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/PeerInfo.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/Server$HandlerThread.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/Server.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/tests/Test$ServerStarter.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/out/production/JitTorrent/tests/Test.class" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/com/company/configs/Common.cfg" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/com/company/configs/PeerInfo.cfg" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/out/production/JitTorrent/com/company/peerProcess.class" afterPath="$PROJECT_DIR$/out/production/JitTorrent/com/company/peerProcess.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/PeerInfo.cfg" afterPath="$PROJECT_DIR$/PeerInfo.cfg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/company/Peer.java" afterPath="$PROJECT_DIR$/src/com/company/Peer.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/company/PeerProcess.java" afterPath="$PROJECT_DIR$/src/com/company/PeerProcess.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/company/configs/CommonConfig.java" afterPath="$PROJECT_DIR$/src/com/company/configs/CommonConfig.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/company/configs/PeerInfo.java" afterPath="$PROJECT_DIR$/src/com/company/configs/PeerInfo.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/company/services/Client.java" afterPath="$PROJECT_DIR$/src/com/company/services/Client.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/company/services/Server.java" afterPath="$PROJECT_DIR$/src/com/company/services/Server.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/tests/Test.java" afterPath="$PROJECT_DIR$/src/tests/Test.java" />
-    </list>
+    <list default="true" id="7ce3bc1c-f9db-4395-bf08-3c2501b792a0" name="Default" comment="" />
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -145,8 +113,8 @@
       <file leaf-file-name="StartTestEnv.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/tests/StartTestEnv.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="120">
-              <caret line="12" column="33" lean-forward="true" selection-start-line="12" selection-start-column="33" selection-end-line="12" selection-end-column="33" />
+            <state relative-caret-position="345">
+              <caret line="27" column="0" lean-forward="true" selection-start-line="27" selection-start-column="0" selection-end-line="27" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -424,13 +392,13 @@
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.17780173" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.17780173" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Coverage" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32967034" sideWeight="0.5" order="0" side_tool="true" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3297414" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2979243" sideWeight="0.5" order="4" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2979243" sideWeight="0.5" order="4" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.23060344" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -691,8 +659,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/tests/StartTestEnv.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="12" column="33" lean-forward="true" selection-start-line="12" selection-start-column="33" selection-end-line="12" selection-end-column="33" />
+        <state relative-caret-position="345">
+          <caret line="27" column="0" lean-forward="true" selection-start-line="27" selection-start-column="0" selection-end-line="27" selection-end-column="0" />
           <folding />
         </state>
       </provider>
