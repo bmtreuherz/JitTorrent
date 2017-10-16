@@ -34,7 +34,12 @@ public class PeerProcess {
         List<PeerInfo> peerInfo = loadPeerInfo();
 
         // Start the peer
-        peer.start(peerInfo);
+        try{
+            peer.start(peerInfo);
+        } catch (Exception e){
+            e.printStackTrace();
+            exit(1);
+        }
     }
 
     // Load the common config file
@@ -43,7 +48,7 @@ public class PeerProcess {
         try{
             commonConfig = CommonConfig.createFromFile(COMMON_CONFIG_FILENAME);
         } catch (Exception e){
-            System.out.println(e);
+            e.printStackTrace();
             exit(1);
         }
 
@@ -56,7 +61,7 @@ public class PeerProcess {
         try {
             peerInfo = PeerInfo.createFromFile(PEER_INFO_FILENAME);
         } catch (Exception e){
-            System.out.println(e);
+            e.printStackTrace();
             exit(1);
         }
 

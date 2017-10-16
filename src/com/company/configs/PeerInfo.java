@@ -29,6 +29,7 @@ public class PeerInfo {
         return hasFile;
     }
 
+    // Constructor
     public PeerInfo(int peerID, String hostName, int listeningPort, boolean hasFile){
         this.peerID = peerID;
         this.hostName = hostName;

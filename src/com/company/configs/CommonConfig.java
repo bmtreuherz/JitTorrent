@@ -41,6 +41,7 @@ public class CommonConfig {
         return pieceSize;
     }
 
+    // Constructor
     public CommonConfig(int numberOfPreferredNeighbors,
             int unchokingInterval,
             int optimisticUnchokingInterval,

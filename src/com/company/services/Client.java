@@ -1,75 +1,95 @@
 package com.company.services;
 
-import java.io.*;
-import java.net.ConnectException;
+import com.company.configs.PeerInfo;
+import com.company.delegates.ClientDelegate;
+import com.company.messages.Message;
+import com.company.messages.MessageType;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 
 public class Client {
+    private int peerID;
+    private int serverPeerID;
+    private ClientDelegate delegate;
     Socket requestSocket;           //socket connect to the server
-    ObjectOutputStream out;         //stream write to the socket
-    ObjectInputStream in;          //stream read from the socket
-    String message;                //message send to the server
-    String MESSAGE;                //capitalized message read from the server
+    DataOutputStream out;         //stream write to the socket
+    DataInputStream in;          //stream read from the socket
 
+    public Client(int peerID, ClientDelegate delegate){
+        this.peerID = peerID;
+        this.delegate = delegate;
+    }
 
-    public void run(String hostname, int port)
+    public void startConnection(PeerInfo peerInfo) throws Exception
     {
-        try{
-            //create a socket to connect to the server
-            requestSocket = new Socket(hostname, port);
-            System.out.println("Connected to " + hostname + ":" + port);
+        // Set the server peerID
+        serverPeerID = peerInfo.getPeerID();
 
-            //initialize inputStream and outputStream
-            out = new ObjectOutputStream(requestSocket.getOutputStream());
-            out.flush();
-            in = new ObjectInputStream(requestSocket.getInputStream());
+        //create a socket to connect to the server
+        requestSocket = new Socket(peerInfo.getHostName(), peerInfo.getListeningPort());
 
-            //get Input from standard input
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-            while (true)
-            {
-                System.out.print("Hello, please input a sentence: ");
-                //read a sentence from the standard input
-                message = bufferedReader.readLine();
-                //Send the sentence to the server
-                sendMessage(message);
-                //Receive the upperCase sentence from the server
-                MESSAGE = (String)in.readObject();
-                //show the message to the user
-                System.out.println("Receive message: " + MESSAGE);
-            }
-        }
-        catch (ConnectException e) {
-            System.err.println("Connection refused. You need to initiate a server first.");
-        }
-        catch ( ClassNotFoundException e ) {
-            System.err.println("Class not found");
-        }
-        catch(UnknownHostException unknownHost){
-            System.err.println("You are trying to connect to an unknown host!");
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
-        }
-        finally{
-            //Close connections
-            try{
-                in.close();
-                out.close();
-                requestSocket.close();
-            }
-            catch(IOException ioException){
-                ioException.printStackTrace();
+        //initialize inputStream and outputStream
+        out = new DataOutputStream(requestSocket.getOutputStream());
+        out.flush();
+        in = new DataInputStream(requestSocket.getInputStream());
+
+        // Send Handshake message on initial connection
+        byte[] handshakePayload = ByteBuffer.allocate(4).putInt(peerID).array();
+        Message handshake = MessageType.HANDSHAKE.createMessageFromPayload(handshakePayload);
+        sendMessage(handshake);
+
+        while (true)
+        {
+            // Wait to receive a response.
+            int length = in.readInt();
+            byte[] response = new byte[length];
+            in.readFully(response);
+            Message responseMessage = MessageType.createMessageFromByteArray(response);
+
+            Message nextMessage = notifyDelegate(responseMessage);
+            if (nextMessage != null){
+                sendMessage(nextMessage);
             }
         }
     }
+
+    private Message notifyDelegate(Message message){
+
+        switch(message.getType()){
+            case HANDSHAKE:
+                return delegate.onServerHandshakeReceived(message, serverPeerID);
+            case BITFIELD:
+                return delegate.onServerBitfieldReceived(message, serverPeerID);
+            case CHOKE:
+                return delegate.onChokeReceived(message, serverPeerID);
+            case UNCHOKE:
+                return delegate.onUnChokeReceived(message, serverPeerID);
+            case HAVE:
+                return delegate.onHaveReceived(message, serverPeerID);
+            case PIECE:
+                return delegate.onPieceReceived(message, serverPeerID);
+            default:
+                return null;
+        }
+    }
+
+    public void closeConnection() throws Exception{
+        in.close();
+        out.close();
+        requestSocket.close();
+    }
+
     //send a message to the output stream
-    void sendMessage(String msg)
+    void sendMessage(Message msg)
     {
         try{
             //stream write the message
-            out.writeObject(msg);
+            out.writeInt(msg.getBytes().length);
+            out.write(msg.getBytes());
             out.flush();
         }
         catch(IOException ioException){
