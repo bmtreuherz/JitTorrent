@@ -12,10 +12,7 @@ import com.company.services.Server;
 import com.company.utilities.InMemoryFile;
 
 import java.nio.ByteBuffer;
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class Peer implements ClientDelegate, ServerDelegate {
@@ -131,36 +128,69 @@ public class Peer implements ClientDelegate, ServerDelegate {
     @Override
     public Message onServerHandshakeReceived(Message message, int serverPeerID) {
         System.out.println("SERVER " + message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // check whether the handshake header is right and the peer ID is the expected one
+        if (HandshakeMessage.class.isInstance(message)) {
+            HandshakeMessage handshakeMessage = HandshakeMessage.class.cast(message);
+            if (handshakeMessage.getPeerID() != serverPeerID) {
+                return null;
+            }
+        }
+
+        // send bitfield message or can skip bitfield message if doesn't have anything
+        if (!bitField.isEmpty()) {
+            /* have a bitfield as its payload
+             * each bit in the bitfield payload represents whether the peer has the corresponding piece or not
+             */
+            return MessageType.BITFIELD.createMessageFromPayload(bitField.toByteArray());
+        }
+
         return null;
     }
 
     @Override
     public Message onServerBitfieldReceived(Message message, int serverPeerID) {
         System.out.println("SERVER " + message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // if has pieces I don't have send "interested" message
+        // else sends "not interested" message
+
         return null;
     }
 
     @Override
     public Message onChokeReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onUnChokeReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onHaveReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // payload contains a 4-byte piece index field
+
         return null;
     }
 
     @Override
     public Message onPieceReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // payload consists of a 4-byte piece index field and the content of the piece
+
         return null;
     }
     
@@ -181,24 +211,41 @@ public class Peer implements ClientDelegate, ServerDelegate {
     @Override
     public Message onClientBitfieldReceived(Message message, int clientPeerID) {
         System.out.println("CLIENT " + message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        /* have a bitfield as its payload
+         * each bit in the bitfield payload represents whether the peer has the corresponding piece or not
+         */
+
+        // if has pieces I don't have send "interested" message
+        // else sends "not interested" message
+
         return null;
     }
 
     @Override
     public Message onInterestedReceived(Message message, int clientPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onNotInterestedReceived(Message message, int clientPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onRequestReceived(Message message, int clientPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        // payload consists of a 4-byte piece index field
+
         return null;
     }
 }
