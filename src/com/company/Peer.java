@@ -137,15 +137,8 @@ public class Peer implements ClientDelegate, ServerDelegate {
             }
         }
 
-        // send bitfield message or can skip bitfield message if doesn't have anything
-        if (!bitField.isEmpty()) {
-            /* have a bitfield as its payload
-             * each bit in the bitfield payload represents whether the peer has the corresponding piece or not
-             */
-            return MessageType.BITFIELD.createMessageFromPayload(bitField.toByteArray());
-        }
-
-        return null;
+        // send bitfield message to server
+        return MessageType.BITFIELD.createMessageFromPayload(bitField.toByteArray());
     }
 
     @Override
@@ -212,12 +205,13 @@ public class Peer implements ClientDelegate, ServerDelegate {
     public Message onClientBitfieldReceived(Message message, int clientPeerID) {
         System.out.println("CLIENT " + message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
 
-        /* have a bitfield as its payload
-         * each bit in the bitfield payload represents whether the peer has the corresponding piece or not
-         */
-
-        // if has pieces I don't have send "interested" message
-        // else sends "not interested" message
+        // send bitfield message or should skip bitfield message if doesn't have anything
+        if (!bitField.isEmpty()) {
+            /* have a bitfield as its payload
+             * each bit in the bitfield payload represents whether the peer has the corresponding piece or not
+             */
+            return MessageType.BITFIELD.createMessageFromPayload(bitField.toByteArray());
+        }
 
         return null;
     }
