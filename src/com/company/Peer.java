@@ -145,10 +145,28 @@ public class Peer implements ClientDelegate, ServerDelegate {
     public Message onServerBitfieldReceived(Message message, int serverPeerID) {
         System.out.println("SERVER " + message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
 
-        // if has pieces I don't have send "interested" message
-        // else sends "not interested" message
+        final BitSet serverBitSet = BitSet.valueOf(message.getPayloadField());
+        int index = 0;
+        ArrayList<Integer> missingBitIndices = new ArrayList<Integer>();
+        while (index < numPieces) {
+            int nextClearBit = this.bitField.nextClearBit(index);
+            if (nextClearBit >= numPieces) { break; } // because we have all the pieces
 
-        return null;
+            if (serverBitSet.get(nextClearBit)) {
+                missingBitIndices.add(nextClearBit);
+            }
+            index = nextClearBit + 1;
+        }
+
+        // Interested and Not-Interested Messages have no payload
+        // if has pieces I don't have send "interested" message
+        if (missingBitIndices.size() > 0) {
+            return MessageType.INTERESTED.createMessageFromPayload(new byte[] {});
+        }
+        // else sends "not interested" message
+        else {
+            return MessageType.NOT_INTERESTED.createMessageFromPayload(new byte[] {});
+        }
     }
 
     @Override
