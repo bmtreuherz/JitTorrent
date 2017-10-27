@@ -158,7 +158,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
             index = nextClearBit + 1;
         }
 
-        // Interested and Not-Interested Messages have no payload
+        // Interested and Not Interested Messages have no payload
         // if has pieces I don't have send "interested" message
         if (missingBitIndices.size() > 0) {
             return MessageType.INTERESTED.createMessageFromPayload(new byte[] {});
