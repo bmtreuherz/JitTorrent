@@ -25,6 +25,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
     private InMemoryFile inMemFile;
     private HashSet<Integer> clientConnections;
     private HashMap<Integer, PeerInfo> peerInfo;
+    private Server server;
 
 
     Peer(int peerID, CommonConfig commonConfig){
@@ -89,7 +90,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
     }
 
     private void startServer(int port){
-        Server server = new Server(this);
+        server = new Server(this);
         new Thread(() -> {
             try {
                 server.start(port);
