@@ -5,29 +5,18 @@ import com.company.delegates.ClientDelegate;
 import com.company.messages.Message;
 import com.company.messages.MessageType;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Client {
     private int peerID;
     private int serverPeerID;
     private ClientDelegate delegate;
-    Socket requestSocket;           //socket connect to the server
-    DataOutputStream out;         //stream write to the socket
-    DataInputStream in;          //stream read from the socket
-    private ConcurrentLinkedQueue<Message> outboundMessageQueue;
-    private ConcurrentLinkedQueue<Message> inboundMessageQueue;
-    private Thread listenerThread;
+    private ConnectionHelper connectionHelper;
 
     public Client(int peerID, ClientDelegate delegate){
         this.peerID = peerID;
         this.delegate = delegate;
-        this.outboundMessageQueue = new ConcurrentLinkedQueue<>();
-        this.inboundMessageQueue = new ConcurrentLinkedQueue<>();
     }
 
     public void startConnection(PeerInfo peerInfo) throws Exception
@@ -36,49 +25,35 @@ public class Client {
         serverPeerID = peerInfo.getPeerID();
 
         //create a socket to connect to the server
-        requestSocket = new Socket(peerInfo.getHostName(), peerInfo.getListeningPort());
+        Socket socket = new Socket(peerInfo.getHostName(), peerInfo.getListeningPort());
 
-        //initialize inputStream and outputStream
-        out = new DataOutputStream(requestSocket.getOutputStream());
-        out.flush();
-        in = new DataInputStream(requestSocket.getInputStream());
+        // Create our helper
+        connectionHelper = new ConnectionHelper(socket);
 
-        // Send Handshake message on initial connection
+        // Add the Handshake message as an outbound message
         byte[] handshakePayload = ByteBuffer.allocate(4).putInt(peerID).array();
         Message handshake = MessageType.HANDSHAKE.createMessageFromPayload(handshakePayload);
-        sendMessage(handshake);
+        addOutboundMessage(handshake);
 
+        // Start loopin brah
         while (true)
         {
-            // Wait to receive a response.
-            //receive the message sent from the client if we are not already waiting for the next message.
-            if (listenerThread == null || !listenerThread.isAlive()){
-                listenerThread = new Thread(() -> this.readMessage(in));
-                listenerThread.start();
-            }
+            // Send any outbound messages
+            connectionHelper.sendOutboundMessages();
 
-            // Check the Outbound queue and send any messages that need to be sent.
-            while(!outboundMessageQueue.isEmpty()){
-                sendMessage(outboundMessageQueue.poll());
-            }
-
-            // Check if we have any incoming messages
-            while(!inboundMessageQueue.isEmpty()){
-                notifyDelegate(inboundMessageQueue.poll());
-            }
+            // Read any inbound messages
+            connectionHelper.receiveInboundMessages(this::notifyDelegate);
         }
     }
 
-    private void readMessage(DataInputStream in){
-        try{
-            int length = in.readInt();
-            byte[] request = new byte[length];
-            in.readFully(request);
-            Message newMessage = MessageType.createMessageFromByteArray(request);
-            inboundMessageQueue.add(newMessage);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+    // Closes the connection
+    public void closeConnection() throws Exception{
+        connectionHelper.closeConnection();
+    }
+
+    // Adds an outbound message to the connection
+    public void addOutboundMessage(Message m){
+        connectionHelper.addOutboundMessage(m);
     }
 
     private void notifyDelegate(Message message){
@@ -108,31 +83,7 @@ public class Client {
         }
 
         if (m != null){
-            outboundMessageQueue.add(m);
-        }
-    }
-
-    public void sendMessageToServer(Message m){
-        outboundMessageQueue.add(m);
-    }
-
-    public void closeConnection() throws Exception{
-        in.close();
-        out.close();
-        requestSocket.close();
-    }
-
-    //send a message to the output stream
-    void sendMessage(Message msg)
-    {
-        try{
-            //stream write the message
-            out.writeInt(msg.getBytes().length);
-            out.write(msg.getBytes());
-            out.flush();
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
+            addOutboundMessage(m);
         }
     }
 }

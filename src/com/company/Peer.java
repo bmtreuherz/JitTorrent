@@ -24,13 +24,12 @@ public class Peer implements ClientDelegate, ServerDelegate {
     private int numPieces;
     private InMemoryFile inMemFile;
     private HashMap<Integer, PeerInfo> peerInfo;
-    private HashMap<Integer, Client> clientConnections; // TODO: Test all the client Connection stuff. Make sure connections are started when they need to be
+    private HashMap<Integer, Client> clientConnections;
     private Server server;
 
-
-    // TODO: Theres a lot of shared functionality between Client and Server. Find a way to share this code somewhere
-    // TODO: Verify the clientConnections sending messages.
-
+    // TODO: We should probably eventually remove clients once the connection terminates. Look into this once we
+    // TODO: get to that point (when a peer has a complete file it no longer needs to be a client of anything so
+    // TODO: we should terminate those connections).
 
     Peer(int peerID, CommonConfig commonConfig){
         this.peerID = peerID;
