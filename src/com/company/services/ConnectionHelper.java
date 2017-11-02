@@ -51,7 +51,13 @@ public class ConnectionHelper {
 
     // Receive inbound messages. On Message Received gets called if there are messages.
     public void receiveInboundMessages(Consumer<Message> onMessageReceived){
+        // Check the input buffer for stuff yo
+        while(!inboundMessageQueue.isEmpty()){
+            onMessageReceived.accept(inboundMessageQueue.poll());
+        }
+    }
 
+    public void listenForMessages(){
         // If we don't have a thread listening for incoming messages start one dawg.
         if (listenerThread == null || !listenerThread.isAlive()){
             listenerThread = new Thread(() -> {
@@ -66,11 +72,6 @@ public class ConnectionHelper {
                 }
             });
             listenerThread.start();
-        }
-
-        // Check the input buffer for stuff yo
-        while(!inboundMessageQueue.isEmpty()){
-            onMessageReceived.accept(inboundMessageQueue.poll());
         }
     }
 

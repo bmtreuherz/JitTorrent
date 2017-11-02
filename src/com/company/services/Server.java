@@ -61,6 +61,9 @@ public class Server {
             try{
                 while (true)
                 {
+                    // Listen on the input port
+                    connectionHelper.listenForMessages();
+
                     // Receive inbound messsages
                     connectionHelper.receiveInboundMessages(this::notifyDelegate);
 

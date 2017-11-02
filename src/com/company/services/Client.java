@@ -41,6 +41,9 @@ public class Client {
             // Send any outbound messages
             connectionHelper.sendOutboundMessages();
 
+            // Listen on the input port
+            connectionHelper.listenForMessages();
+
             // Read any inbound messages
             connectionHelper.receiveInboundMessages(this::notifyDelegate);
         }
