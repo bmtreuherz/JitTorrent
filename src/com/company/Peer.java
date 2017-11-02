@@ -23,9 +23,13 @@ public class Peer implements ClientDelegate, ServerDelegate {
     private BitSet bitField;
     private int numPieces;
     private InMemoryFile inMemFile;
-    private HashSet<Integer> clientConnections;
     private HashMap<Integer, PeerInfo> peerInfo;
+    private HashMap<Integer, Client> clientConnections; // TODO: Test all the client Connection stuff. Make sure connections are started when they need to be
     private Server server;
+
+
+    // TODO: Theres a lot of shared functionality between Client and Server. Find a way to share this code somewhere
+    // TODO: Verify the clientConnections sending messages.
 
 
     Peer(int peerID, CommonConfig commonConfig){
@@ -41,7 +45,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
         // Initialize an empty file in memory.
         this.inMemFile = new InMemoryFile(new byte[fileSize], pieceSize);
 
-        this.clientConnections = new HashSet<>();
+        this.clientConnections = new HashMap<>();
         this.peerInfo = new HashMap<>();
     }
 
@@ -109,7 +113,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
     private void startClientConnection(PeerInfo serverInfo){
         Client client = new Client(peerID, this);
 
-        clientConnections.add(serverInfo.getPeerID());
+        clientConnections.put(serverInfo.getPeerID(), client);
         new Thread(() -> {
             try {
                 client.startConnection(serverInfo);
@@ -133,6 +137,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
         // check whether the handshake header is right and the peer ID is the expected one
         if (HandshakeMessage.class.isInstance(message)) {
             HandshakeMessage handshakeMessage = HandshakeMessage.class.cast(message);
+
             if (handshakeMessage.getPeerID() != serverPeerID) {
                 return null;
             }
@@ -158,6 +163,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
             }
             index = nextClearBit + 1;
         }
+
 
         // Interested and Not Interested Messages have no payload
         // if has pieces I don't have send "interested" message
@@ -213,7 +219,13 @@ public class Peer implements ClientDelegate, ServerDelegate {
         System.out.println("CLIENT " + message.getType().name() + " RECEIVED FROM: " + ((HandshakeMessage)message).getPeerID() + " TO: " + peerID);
 
         // Set the client peerID
-        setClientPeerID.accept(((HandshakeMessage)message).getPeerID());
+        int clientPeerID = ((HandshakeMessage)message).getPeerID();
+        setClientPeerID.accept(clientPeerID);
+
+        // When a client reaches out to this peer, if this peer is not a client for that peer start a connection
+        if (!clientConnections.containsKey(clientPeerID)){
+            startClientConnection(peerInfo.get(clientPeerID));
+        }
 
         // Send a handshake back to the client
         byte[] handshakePayload = ByteBuffer.allocate(4).putInt(peerID).array();

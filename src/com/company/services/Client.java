@@ -10,6 +10,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Client {
     private int peerID;
@@ -18,10 +19,15 @@ public class Client {
     Socket requestSocket;           //socket connect to the server
     DataOutputStream out;         //stream write to the socket
     DataInputStream in;          //stream read from the socket
+    private ConcurrentLinkedQueue<Message> outboundMessageQueue;
+    private ConcurrentLinkedQueue<Message> inboundMessageQueue;
+    private Thread listenerThread;
 
     public Client(int peerID, ClientDelegate delegate){
         this.peerID = peerID;
         this.delegate = delegate;
+        this.outboundMessageQueue = new ConcurrentLinkedQueue<>();
+        this.inboundMessageQueue = new ConcurrentLinkedQueue<>();
     }
 
     public void startConnection(PeerInfo peerInfo) throws Exception
@@ -45,36 +51,69 @@ public class Client {
         while (true)
         {
             // Wait to receive a response.
-            int length = in.readInt();
-            byte[] response = new byte[length];
-            in.readFully(response);
-            Message responseMessage = MessageType.createMessageFromByteArray(response);
+            //receive the message sent from the client if we are not already waiting for the next message.
+            if (listenerThread == null || !listenerThread.isAlive()){
+                listenerThread = new Thread(() -> this.readMessage(in));
+                listenerThread.start();
+            }
 
-            Message nextMessage = notifyDelegate(responseMessage);
-            if (nextMessage != null){
-                sendMessage(nextMessage);
+            // Check the Outbound queue and send any messages that need to be sent.
+            while(!outboundMessageQueue.isEmpty()){
+                sendMessage(outboundMessageQueue.poll());
+            }
+
+            // Check if we have any incoming messages
+            while(!inboundMessageQueue.isEmpty()){
+                notifyDelegate(inboundMessageQueue.poll());
             }
         }
     }
 
-    private Message notifyDelegate(Message message){
+    private void readMessage(DataInputStream in){
+        try{
+            int length = in.readInt();
+            byte[] request = new byte[length];
+            in.readFully(request);
+            Message newMessage = MessageType.createMessageFromByteArray(request);
+            inboundMessageQueue.add(newMessage);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
+    private void notifyDelegate(Message message){
+
+        Message m;
         switch(message.getType()){
             case HANDSHAKE:
-                return delegate.onServerHandshakeReceived(message, serverPeerID);
+                m = delegate.onServerHandshakeReceived(message, serverPeerID);
+                break;
             case BITFIELD:
-                return delegate.onServerBitfieldReceived(message, serverPeerID);
+                m = delegate.onServerBitfieldReceived(message, serverPeerID);
+                break;
             case CHOKE:
-                return delegate.onChokeReceived(message, serverPeerID);
+                m = delegate.onChokeReceived(message, serverPeerID);
+                break;
             case UNCHOKE:
-                return delegate.onUnChokeReceived(message, serverPeerID);
+                m = delegate.onUnChokeReceived(message, serverPeerID);
+                break;
             case HAVE:
-                return delegate.onHaveReceived(message, serverPeerID);
+                m = delegate.onHaveReceived(message, serverPeerID);
+                break;
             case PIECE:
-                return delegate.onPieceReceived(message, serverPeerID);
+                m = delegate.onPieceReceived(message, serverPeerID);
+                break;
             default:
-                return null;
+                m = null;
         }
+
+        if (m != null){
+            outboundMessageQueue.add(m);
+        }
+    }
+
+    public void sendMessageToServer(Message m){
+        outboundMessageQueue.add(m);
     }
 
     public void closeConnection() throws Exception{

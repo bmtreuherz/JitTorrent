@@ -57,8 +57,7 @@ public class Server {
         private DataInputStream in;	//stream read from the socket
         private DataOutputStream out;    //stream write to the socket
         private int clientPeerID;
-        private ConcurrentLinkedQueue<Message> highPriorityOutboundMessageQueue; // Handshake and Bitfield should be sent as high priority messages
-        private ConcurrentLinkedQueue<Message> standardOutboundMessageQueue; // All other messages will be put here.
+        private ConcurrentLinkedQueue<Message> outboundMessageQueue;
         private ConcurrentLinkedQueue<Message> inboundMessageQueue;
         private Thread listenerThread;
 
@@ -66,8 +65,7 @@ public class Server {
             this.connection = connection;
             this.delegate = delegate;
             this.clientPeerID = -1;
-            this.highPriorityOutboundMessageQueue = new ConcurrentLinkedQueue<>();
-            this.standardOutboundMessageQueue = new ConcurrentLinkedQueue<>();
+            this.outboundMessageQueue = new ConcurrentLinkedQueue<>();
             this.inboundMessageQueue = new ConcurrentLinkedQueue<>();
         }
 
@@ -93,25 +91,15 @@ public class Server {
 
             while (true)
             {
-                // TODO: Make sure that no race conditions can result from being able to send more than one message
-                // I think the biggest risk here is having multiple back and forth's happening at once. I don't think it
-                // would actually break things but it could result in worse performance and its kinda weird so there might
-                // be edge cases I haven't thought of yet.
-
                 //receive the message sent from the client if we are not already waiting for the next message.
                 if (listenerThread == null || !listenerThread.isAlive()){
-                    listenerThread = new Thread(() -> {
-                        this.readMessage(in);
-                    });
+                    listenerThread = new Thread(() -> this.readMessage(in));
                     listenerThread.start();
                 }
 
-                // Check the Outbound queues and send any messages that need to be sent.
-                while(!highPriorityOutboundMessageQueue.isEmpty()){
-                    sendMessage(highPriorityOutboundMessageQueue.poll());
-                }
-                while(!standardOutboundMessageQueue.isEmpty()){
-                    sendMessage(standardOutboundMessageQueue.poll());
+                // Check the Outbound queue and send any messages that need to be sent.
+                while(!outboundMessageQueue.isEmpty()){
+                    sendMessage(outboundMessageQueue.poll());
                 }
 
                 // Check if we have any incoming messages
@@ -123,7 +111,7 @@ public class Server {
 
         // Adds a message to the standard outbound message queue
         public void addOutboundMessage(Message m){
-            standardOutboundMessageQueue.add(m);
+            outboundMessageQueue.add(m);
         }
 
         private void notifyDelegate(Message message){
@@ -149,11 +137,8 @@ public class Server {
                     m = null;
             }
 
-            // Add the message to the appropriate message queue.
-            if (m != null && (m.getType() == MessageType.HANDSHAKE || m.getType() == MessageType.BITFIELD)){
-                highPriorityOutboundMessageQueue.add(m);
-            } else if (m != null){
-                standardOutboundMessageQueue.add(m);
+            if (m != null){
+                outboundMessageQueue.add(m);
             }
         }
 
@@ -163,6 +148,7 @@ public class Server {
             connection.close();
         }
 
+        // Blocks the calling thread until an incoming message is received
         private void readMessage(DataInputStream in){
             try{
                 int length = in.readInt();
