@@ -12,10 +12,7 @@ import com.company.services.Server;
 import com.company.utilities.InMemoryFile;
 
 import java.nio.ByteBuffer;
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class Peer implements ClientDelegate, ServerDelegate {
@@ -26,9 +23,13 @@ public class Peer implements ClientDelegate, ServerDelegate {
     private BitSet bitField;
     private int numPieces;
     private InMemoryFile inMemFile;
-    private HashSet<Integer> clientConnections;
     private HashMap<Integer, PeerInfo> peerInfo;
+    private HashMap<Integer, Client> clientConnections;
+    private Server server;
 
+    // TODO: We should probably eventually remove clients once the connection terminates. Look into this once we
+    // TODO: get to that point (when a peer has a complete file it no longer needs to be a client of anything so
+    // TODO: we should terminate those connections).
 
     Peer(int peerID, CommonConfig commonConfig){
         this.peerID = peerID;
@@ -43,7 +44,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
         // Initialize an empty file in memory.
         this.inMemFile = new InMemoryFile(new byte[fileSize], pieceSize);
 
-        this.clientConnections = new HashSet<>();
+        this.clientConnections = new HashMap<>();
         this.peerInfo = new HashMap<>();
     }
 
@@ -92,7 +93,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
     }
 
     private void startServer(int port){
-        Server server = new Server(this);
+        server = new Server(this);
         new Thread(() -> {
             try {
                 server.start(port);
@@ -111,7 +112,7 @@ public class Peer implements ClientDelegate, ServerDelegate {
     private void startClientConnection(PeerInfo serverInfo){
         Client client = new Client(peerID, this);
 
-        clientConnections.add(serverInfo.getPeerID());
+        clientConnections.put(serverInfo.getPeerID(), client);
         new Thread(() -> {
             try {
                 client.startConnection(serverInfo);
@@ -131,36 +132,82 @@ public class Peer implements ClientDelegate, ServerDelegate {
     @Override
     public Message onServerHandshakeReceived(Message message, int serverPeerID) {
         System.out.println("SERVER " + message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
-        return null;
+
+        // check whether the handshake header is right and the peer ID is the expected one
+        if (HandshakeMessage.class.isInstance(message)) {
+            HandshakeMessage handshakeMessage = HandshakeMessage.class.cast(message);
+
+            if (handshakeMessage.getPeerID() != serverPeerID) {
+                return null;
+            }
+        }
+
+        // send bitfield message to server
+        return MessageType.BITFIELD.createMessageFromPayload(bitField.toByteArray());
     }
 
     @Override
     public Message onServerBitfieldReceived(Message message, int serverPeerID) {
         System.out.println("SERVER " + message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
-        return null;
+
+        final BitSet serverBitSet = BitSet.valueOf(message.getPayloadField());
+        int index = 0;
+        ArrayList<Integer> missingBitIndices = new ArrayList<Integer>();
+        while (index < numPieces) {
+            int nextClearBit = this.bitField.nextClearBit(index);
+            if (nextClearBit >= numPieces) { break; } // because we have all the pieces
+
+            if (serverBitSet.get(nextClearBit)) {
+                missingBitIndices.add(nextClearBit);
+            }
+            index = nextClearBit + 1;
+        }
+
+
+        // Interested and Not Interested Messages have no payload
+        // if has pieces I don't have send "interested" message
+        if (missingBitIndices.size() > 0) {
+            return MessageType.INTERESTED.createMessageFromPayload(new byte[] {});
+        }
+        // else sends "not interested" message
+        else {
+            return MessageType.NOT_INTERESTED.createMessageFromPayload(new byte[] {});
+        }
     }
 
     @Override
     public Message onChokeReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onUnChokeReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onHaveReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // payload contains a 4-byte piece index field
+
         return null;
     }
 
     @Override
     public Message onPieceReceived(Message message, int serverPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + serverPeerID + " TO: " + peerID);
+
+        // payload consists of a 4-byte piece index field and the content of the piece
+
         return null;
     }
     
@@ -171,7 +218,13 @@ public class Peer implements ClientDelegate, ServerDelegate {
         System.out.println("CLIENT " + message.getType().name() + " RECEIVED FROM: " + ((HandshakeMessage)message).getPeerID() + " TO: " + peerID);
 
         // Set the client peerID
-        setClientPeerID.accept(((HandshakeMessage)message).getPeerID());
+        int clientPeerID = ((HandshakeMessage)message).getPeerID();
+        setClientPeerID.accept(clientPeerID);
+
+        // When a client reaches out to this peer, if this peer is not a client for that peer start a connection
+        if (!clientConnections.containsKey(clientPeerID)){
+            startClientConnection(peerInfo.get(clientPeerID));
+        }
 
         // Send a handshake back to the client
         byte[] handshakePayload = ByteBuffer.allocate(4).putInt(peerID).array();
@@ -181,24 +234,42 @@ public class Peer implements ClientDelegate, ServerDelegate {
     @Override
     public Message onClientBitfieldReceived(Message message, int clientPeerID) {
         System.out.println("CLIENT " + message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        // send bitfield message or should skip bitfield message if doesn't have anything
+        if (!bitField.isEmpty()) {
+            /* have a bitfield as its payload
+             * each bit in the bitfield payload represents whether the peer has the corresponding piece or not
+             */
+            return MessageType.BITFIELD.createMessageFromPayload(bitField.toByteArray());
+        }
+
         return null;
     }
 
     @Override
     public Message onInterestedReceived(Message message, int clientPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onNotInterestedReceived(Message message, int clientPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        // no payload
+
         return null;
     }
 
     @Override
     public Message onRequestReceived(Message message, int clientPeerID) {
         System.out.println(message.getType().name() + " RECEIVED FROM: " + clientPeerID + " TO: " + peerID);
+
+        // payload consists of a 4-byte piece index field
+
         return null;
     }
 }
