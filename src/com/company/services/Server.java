@@ -2,19 +2,22 @@ package com.company.services;
 
 import com.company.delegates.ServerDelegate;
 import com.company.messages.Message;
-import com.company.messages.MessageType;
 
-import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Server {
 
     private ServerDelegate delegate;
     private ServerSocket listener;
+    private List<HandlerThread> handlerThreads;
 
     public Server(ServerDelegate delegate){
+
         this.delegate = delegate;
+        this.handlerThreads = new ArrayList<>();
     }
 
     public void start(int port) throws Exception{
@@ -23,7 +26,9 @@ public class Server {
 
         while (true) {
             // Start a new thread to handle an incoming connection
-            new HandlerThread(listener.accept(), delegate).start();
+            HandlerThread t = new HandlerThread(listener.accept(), delegate);
+            handlerThreads.add(t);
+            t.start();
         }
     }
 
@@ -31,94 +36,87 @@ public class Server {
         listener.close();
     }
 
+    // Yo Nick call this method from Peer when you need to send have message to everyone.
+    public void sendMessageToAllClients(Message m){
+        handlerThreads.forEach((thread) -> {
+            if(thread.isAlive()){ // TODO: Should probably remove threads from the list once the thread goes inactive but too lazy right now and it won't break anything.
+                thread.addOutboundMessage(m); // TODO: Also we haven't really implemented closing connections as part of the protocol yet so maybe do this with that stuff.
+            }
+        });
+    }
+
     // Each of these threads will be created to handle each client request.
     private static class HandlerThread extends Thread {
-        private Socket connection;
-        private ServerDelegate delegate;
-        private DataInputStream in;	//stream read from the socket
-        private DataOutputStream out;    //stream write to the socket
         private int clientPeerID;
+        private ServerDelegate delegate;
+        private ConnectionHelper connectionHelper;
 
-        public HandlerThread(Socket connection, ServerDelegate delegate) {
-            this.connection = connection;
+        public HandlerThread(Socket socket, ServerDelegate delegate) {
+            this.connectionHelper = new ConnectionHelper(socket);
             this.delegate = delegate;
             this.clientPeerID = -1;
         }
 
         public void run() {
             try{
-                handleRequest();
+                while (true)
+                {
+                    // Listen on the input port
+                    connectionHelper.listenForMessages();
+
+                    // Receive inbound messsages
+                    connectionHelper.receiveInboundMessages(this::notifyDelegate);
+
+                    // Send outbound messages
+                    connectionHelper.sendOutboundMessages();
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             } finally{
                 try {
-                    closeConnection();
+                    connectionHelper.closeConnection();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
 
-        public void handleRequest() throws Exception{
-            //initialize Input and Output streams
-            out = new DataOutputStream(connection.getOutputStream());
-            out.flush();
-            in = new DataInputStream(connection.getInputStream());
-
-            while (true)
-            {
-                //receive the message sent from the client
-                int length = in.readInt();
-                byte[] request = new byte[length];
-                in.readFully(request);
-                Message requestMessage = MessageType.createMessageFromByteArray(request);
-
-                Message responseMessage = notifyDelegate(requestMessage);
-                if (responseMessage != null){
-                    sendMessage(responseMessage);
-                }
-            }
+        // Adds a message to the standard outbound message queue
+        public void addOutboundMessage(Message m){
+            connectionHelper.addOutboundMessage(m);
         }
 
-        private Message notifyDelegate(Message message){
+        private void notifyDelegate(Message message){
+
+            Message m;
             switch(message.getType()){
                 case HANDSHAKE:
-                    return delegate.onClientHandshakeReceived(message, this::setClientPeerID);
+                    m =  delegate.onClientHandshakeReceived(message, this::setClientPeerID);
+                    break;
                 case BITFIELD:
-                    return delegate.onClientBitfieldReceived(message, clientPeerID);
+                    m = delegate.onClientBitfieldReceived(message, clientPeerID);
+                    break;
                 case INTERESTED:
-                    return delegate.onInterestedReceived(message, clientPeerID);
+                    m = delegate.onInterestedReceived(message, clientPeerID);
+                    break;
                 case NOT_INTERESTED:
-                    return delegate.onNotInterestedReceived(message, clientPeerID);
+                    m = delegate.onNotInterestedReceived(message, clientPeerID);
+                    break;
                 case REQUEST:
-                    return delegate.onRequestReceived(message, clientPeerID);
+                    m = delegate.onRequestReceived(message, clientPeerID);
+                    break;
                 default:
-                    return null;
+                    m = null;
+            }
+
+            if (m != null){
+                addOutboundMessage(m);
             }
         }
 
-        public void closeConnection() throws Exception{
-            in.close();
-            out.close();
-            connection.close();
-        }
+        private void setClientPeerID(int clientPeerID){
 
-        //send a message to the output stream
-        public void sendMessage(Message msg)
-        {
-            try{
-                out.writeInt(msg.getBytes().length);
-                out.write(msg.getBytes());
-                out.flush();
-            }
-            catch(IOException ioException){
-                ioException.printStackTrace();
-            }
-        }
-
-        public void setClientPeerID(int clientPeerID){
             this.clientPeerID = clientPeerID;
         }
-
     }
 }

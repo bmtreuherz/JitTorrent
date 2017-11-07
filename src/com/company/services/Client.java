@@ -5,9 +5,6 @@ import com.company.delegates.ClientDelegate;
 import com.company.messages.Message;
 import com.company.messages.MessageType;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
@@ -15,9 +12,7 @@ public class Client {
     private int peerID;
     private int serverPeerID;
     private ClientDelegate delegate;
-    Socket requestSocket;           //socket connect to the server
-    DataOutputStream out;         //stream write to the socket
-    DataInputStream in;          //stream read from the socket
+    private ConnectionHelper connectionHelper;
 
     public Client(int peerID, ClientDelegate delegate){
         this.peerID = peerID;
@@ -30,70 +25,68 @@ public class Client {
         serverPeerID = peerInfo.getPeerID();
 
         //create a socket to connect to the server
-        requestSocket = new Socket(peerInfo.getHostName(), peerInfo.getListeningPort());
+        Socket socket = new Socket(peerInfo.getHostName(), peerInfo.getListeningPort());
 
-        //initialize inputStream and outputStream
-        out = new DataOutputStream(requestSocket.getOutputStream());
-        out.flush();
-        in = new DataInputStream(requestSocket.getInputStream());
+        // Create our helper
+        connectionHelper = new ConnectionHelper(socket);
 
-        // Send Handshake message on initial connection
+        // Add the Handshake message as an outbound message
         byte[] handshakePayload = ByteBuffer.allocate(4).putInt(peerID).array();
         Message handshake = MessageType.HANDSHAKE.createMessageFromPayload(handshakePayload);
-        sendMessage(handshake);
+        addOutboundMessage(handshake);
 
+        // Start loopin brah
         while (true)
         {
-            // Wait to receive a response.
-            int length = in.readInt();
-            byte[] response = new byte[length];
-            in.readFully(response);
-            Message responseMessage = MessageType.createMessageFromByteArray(response);
+            // Send any outbound messages
+            connectionHelper.sendOutboundMessages();
 
-            Message nextMessage = notifyDelegate(responseMessage);
-            if (nextMessage != null){
-                sendMessage(nextMessage);
-            }
+            // Listen on the input port
+            connectionHelper.listenForMessages();
+
+            // Read any inbound messages
+            connectionHelper.receiveInboundMessages(this::notifyDelegate);
         }
     }
 
-    private Message notifyDelegate(Message message){
+    // Closes the connection
+    public void closeConnection() throws Exception{
+        connectionHelper.closeConnection();
+    }
 
+    // Adds an outbound message to the connection
+    public void addOutboundMessage(Message m){
+        connectionHelper.addOutboundMessage(m);
+    }
+
+    private void notifyDelegate(Message message){
+
+        Message m;
         switch(message.getType()){
             case HANDSHAKE:
-                return delegate.onServerHandshakeReceived(message, serverPeerID);
+                m = delegate.onServerHandshakeReceived(message, serverPeerID);
+                break;
             case BITFIELD:
-                return delegate.onServerBitfieldReceived(message, serverPeerID);
+                m = delegate.onServerBitfieldReceived(message, serverPeerID);
+                break;
             case CHOKE:
-                return delegate.onChokeReceived(message, serverPeerID);
+                m = delegate.onChokeReceived(message, serverPeerID);
+                break;
             case UNCHOKE:
-                return delegate.onUnChokeReceived(message, serverPeerID);
+                m = delegate.onUnChokeReceived(message, serverPeerID);
+                break;
             case HAVE:
-                return delegate.onHaveReceived(message, serverPeerID);
+                m = delegate.onHaveReceived(message, serverPeerID);
+                break;
             case PIECE:
-                return delegate.onPieceReceived(message, serverPeerID);
+                m = delegate.onPieceReceived(message, serverPeerID);
+                break;
             default:
-                return null;
+                m = null;
         }
-    }
 
-    public void closeConnection() throws Exception{
-        in.close();
-        out.close();
-        requestSocket.close();
-    }
-
-    //send a message to the output stream
-    void sendMessage(Message msg)
-    {
-        try{
-            //stream write the message
-            out.writeInt(msg.getBytes().length);
-            out.write(msg.getBytes());
-            out.flush();
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
+        if (m != null){
+            addOutboundMessage(m);
         }
     }
 }
